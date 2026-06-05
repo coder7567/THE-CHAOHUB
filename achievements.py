@@ -218,6 +218,106 @@ class LevelUpToast(tk.Frame):
         else:
             self.destroy()
 
+class HydrationToast(tk.Toplevel):
+    """
+    Cyberpunk Warning Toast for low hydration levels.
+    Subclasses a borderless Tkinter Toplevel window, flashing warning colors,
+    and sliding in from the right.
+    """
+    def __init__(self, root):
+        super().__init__(root)
+        self.root = root
+        
+        # Make borderless and always on top
+        self.overrideredirect(True)
+        self.attributes("-topmost", True)
+        
+        # Cyberpunk styling (Dark Charcoal background, Laser Red/Danger Amber highlight)
+        self.config(bg="#000000")
+        
+        container = tk.Frame(self, bg="#1a1a1a", highlightthickness=2, highlightbackground="#ffaa00")
+        container.pack(fill="both", expand=True, padx=2, pady=2)
+        
+        lbl_icon = tk.Label(container, text="☣ WARNING: SYSTEM CRITICAL ☣", fg="#ffaa00", bg="#1a1a1a", font=("Courier", 10, "bold"))
+        lbl_icon.pack(pady=(12, 4))
+        
+        self.lbl_msg = tk.Label(
+            container, 
+            text="CRITICAL: CHAO HUB PLANT DEHYDRATED (< 25%)!\nSYSTEM CRASH IMMINENT.", 
+            fg="#ff0000", 
+            bg="#1a1a1a", 
+            font=("Courier", 9, "bold"), 
+            justify="center"
+        )
+        self.lbl_msg.pack(padx=15, pady=(0, 12))
+        
+        # Play a caution alarm beep
+        try:
+            play_sound_effect("beep")
+        except Exception:
+            pass
+            
+        # Animation / placement setup
+        # Dimensions of the warning toast
+        self.width = 380
+        self.height = 90
+        
+        # Get parent geometry to reference bounds
+        parent_x = self.root.winfo_x()
+        parent_y = self.root.winfo_y()
+        parent_width = self.root.winfo_width()
+        parent_height = self.root.winfo_height()
+        
+        if parent_width <= 1:
+            parent_width = self.root.winfo_screenwidth()
+            parent_height = self.root.winfo_screenheight()
+            parent_x = 0
+            parent_y = 0
+            
+        self.start_x = parent_x + parent_width
+        self.target_x = parent_x + parent_width - self.width - 25 # 25px offset from right
+        self.current_x = self.start_x
+        
+        # Put it in the upper right, below typical system titles (e.g. y = 140)
+        self.y = parent_y + 140
+        
+        self.geometry(f"{self.width}x{self.height}+{int(self.current_x)}+{int(self.y)}")
+        
+        # Start animations
+        self.slide_in()
+        self.flash()
+        
+    def slide_in(self):
+        if not self.winfo_exists():
+            return
+        if self.current_x > self.target_x:
+            step = max(4, int((self.current_x - self.target_x) * 0.25))
+            self.current_x -= step
+            self.geometry(f"{self.width}x{self.height}+{int(self.current_x)}+{int(self.y)}")
+            self.after(16, self.slide_in)
+        else:
+            self.after(5000, self.slide_out)
+            
+    def slide_out(self):
+        if not self.winfo_exists():
+            return
+        if self.current_x < self.start_x:
+            step = max(4, int((self.start_x - self.current_x) * 0.25))
+            self.current_x += step
+            self.geometry(f"{self.width}x{self.height}+{int(self.current_x)}+{int(self.y)}")
+            self.after(16, self.slide_out)
+        else:
+            self.destroy()
+            
+    def flash(self):
+        if not self.winfo_exists():
+            return
+        # Toggle foreground colors
+        current_fg = self.lbl_msg.cget("fg")
+        new_fg = "#ffaa00" if current_fg == "#ff0000" else "#ff0000"
+        self.lbl_msg.config(fg=new_fg)
+        self.after(350, self.flash)
+
 # ==============================================================================
 # 2. THE CENTRALIZED THREAD-SAFE ACHIEVEMENT MANAGER (SINGLETON)
 # ==============================================================================
