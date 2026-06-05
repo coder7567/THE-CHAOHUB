@@ -80,6 +80,7 @@ class ChaoTokenType(Enum):
     PLANT = auto()
     END_PLANT = auto()
     SPROUT = auto()  # Used as SPROUT [float type] and SPROUT [module name]
+    IMPORT = auto()
 
     # Type Identifiers
     SEED = auto()    # Integer
@@ -174,6 +175,7 @@ class ChaoLexer:
 
             (ChaoTokenType.PLANT, r"PLANT\b"),
             (ChaoTokenType.SPROUT, r"SPROUT\b"),
+            (ChaoTokenType.IMPORT, r"IMPORT\b"),
             (ChaoTokenType.SEED, r"SEED\b"),
             (ChaoTokenType.WATER, r"WATER\b"),
             (ChaoTokenType.SOIL, r"SOIL\b"),
@@ -215,7 +217,7 @@ class ChaoLexer:
             (ChaoTokenType.RBRACKET, r"\]"),
             (ChaoTokenType.COMMA, r","),
 
-            (ChaoTokenType.IDENTIFIER, r"[a-zA-Z_][a-zA-Z0-9_]*"),
+            (ChaoTokenType.IDENTIFIER, r"[a-zA-Z_][a-zA-Z0-9_.]*"),
         ]
 
     def _lex_line(self, line_text: str, line_num: int, start_col: int) -> List[ChaoToken]:
@@ -518,6 +520,17 @@ class SproutStatementNode(ASTNode):
 
 
 @dataclass
+class ImportNode(ASTNode):
+    module_name: str
+
+    def to_dict(self) -> dict:
+        return {
+            "type": "ImportNode",
+            "module_name": self.module_name
+        }
+
+
+@dataclass
 class BinOpNode(ASTNode):
     left: ASTNode
     op: str
@@ -716,6 +729,9 @@ class ChaoParser:
                 return self.parse_var_decl()
             return self.parse_sprout_statement()
 
+        elif tok.type == ChaoTokenType.IMPORT:
+            return self.parse_import_statement()
+
         elif tok.type in {ChaoTokenType.SEED, ChaoTokenType.BED, ChaoTokenType.DAEMON}:
             return self.parse_var_decl()
 
@@ -801,7 +817,9 @@ class ChaoParser:
         self.consume(ChaoTokenType.END_PLANT, "closing plant boundary")
         
         self.symbol_table = old_table
-        return ProgramNode(statements=body)
+        node = ProgramNode(statements=body)
+        node.name = name_tok.value
+        return node
 
     def parse_var_decl(self) -> VariableDeclNode:
         type_tok = self.consume_any(
@@ -827,6 +845,11 @@ class ChaoParser:
         self.consume(ChaoTokenType.SPROUT, "matching sprout execution keyword")
         name_tok = self.consume(ChaoTokenType.IDENTIFIER, "extracting module identifier to sprout")
         return SproutStatementNode(name=name_tok.value)
+
+    def parse_import_statement(self) -> ImportNode:
+        self.consume(ChaoTokenType.IMPORT, "matching import keyword")
+        name_tok = self.consume(ChaoTokenType.IDENTIFIER, "extracting module identifier to import")
+        return ImportNode(module_name=name_tok.value)
 
     def parse_print_statement(self) -> PrintNode:
         self.consume(ChaoTokenType.WATER, "matching water printing keyword")
@@ -1101,6 +1124,9 @@ def print_chao_ast(node: ASTNode, indent: int = 0) -> None:
 
     elif isinstance(node, SproutStatementNode):
         print(f"{spacing}SproutStatementNode (SPROUT Garden: '{node.name}')")
+
+    elif isinstance(node, ImportNode):
+        print(f"{spacing}ImportNode (Module: '{node.module_name}')")
 
     elif isinstance(node, BinOpNode):
         print(f"{spacing}BinOpNode (Operator: '{node.op}')")
