@@ -70,6 +70,7 @@ class CyberPlantManager:
         self.alive = True
         self.animation_frame = 0
         self.ticks_since_save = 0
+        self.has_warned = False
 
         # Logger / Alert Console History
         self.alerts = []
@@ -288,6 +289,17 @@ class CyberPlantManager:
         except:
             pass
 
+    def trigger_hydration_warning_toast(self):
+        """Dispatches a non-blocking HydrationToast via the main Tkinter thread."""
+        try:
+            from achievements import HydrationToast
+            root = self.parent_frame.winfo_toplevel()
+            if root and hasattr(root, "app_instance") and root.app_instance:
+                app = root.app_instance
+                app.root.after(0, lambda: HydrationToast(app.root))
+        except Exception as e:
+            self.add_alert(f"[ WARN ] Toast fail: {str(e)[:20]}")
+
     def get_stage(self):
         """Calculates developmental stages dynamically based on growth scale."""
         g = self.growth_points
@@ -322,6 +334,14 @@ class CyberPlantManager:
                 else:
                     # THEN drain hydration
                     self.hydration = max(0.0, self.hydration - 0.5)
+
+                    # Trigger warnings
+                    if self.hydration < 25.0:
+                        if not getattr(self, "has_warned", False):
+                            self.has_warned = True
+                            self.trigger_hydration_warning_toast()
+                    else:
+                        self.has_warned = False
 
                     # Growth rules
                     if 25.0 <= self.hydration <= 75.0:
@@ -372,6 +392,8 @@ class CyberPlantManager:
         if not self.alive:
             return
         self.hydration = min(100.0, self.hydration + 15.0)
+        if self.hydration >= 25.0:
+            self.has_warned = False
         self.add_alert("[ INJECT ] H2O Hydration +15.0%")
         self.update_ui()
         self.update_ascii_display()
@@ -408,6 +430,7 @@ class CyberPlantManager:
         self.alive = True
         self.animation_frame = 0
         self.ticks_since_save = 0
+        self.has_warned = False
 
         self.alerts.clear()
         self.add_alert("[ RESET ] Plant system default restored.")
