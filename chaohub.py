@@ -42,6 +42,7 @@ from creative_suite import CreativeSuiteModule
 from hacker_chat import HackerChatModule
 from chaonet_browser import ChaoNetModule
 from achievements import AchievementManager, AchievementsModule
+from chaoscript_ide import ChaoScriptModule
 
 
 # Initialize Pygame Mixer before doing anything else
@@ -3743,7 +3744,8 @@ class ChaoHubApp:
             "TERMINAL SHELL": lambda p: TerminalModule(p),
             "IRC CHAT ROOM": lambda p: HackerChatModule(p),
             "CHAONET PROXY": lambda p: ChaoNetModule(p, self.glitch_manager),
-            "TROPHY ROOM": lambda p: AchievementsModule(p)
+            "TROPHY ROOM": lambda p: AchievementsModule(p),
+            "CHAOSCRIPT IDE": lambda p: ChaoScriptModule(p, self)
         }
 
         # Append dynamic navigation tabs from loaded mods (Vector A)
